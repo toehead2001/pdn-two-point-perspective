@@ -92,7 +92,18 @@ namespace TwoPointPerspectiveEffect
             Amount4,
             Amount5,
             Amount6,
-            Amount7
+            Amount7,
+            Amount8,
+            Amount9,
+            Amount10,
+            Amount11
+        }
+
+        public enum Amount10Options
+        {
+            Amount10Option1,
+            Amount10Option2,
+            Amount10Option3
         }
 
 
@@ -106,9 +117,18 @@ namespace TwoPointPerspectiveEffect
             props.Add(new DoubleVectorProperty(PropertyNames.Amount6, Pair.Create(0.0, 0.0), Pair.Create(-1.0, -1.0), Pair.Create(+1.0, +1.0)));
             props.Add(new BooleanProperty(PropertyNames.Amount5, true));
             props.Add(new DoubleVectorProperty(PropertyNames.Amount7, Pair.Create(0.0, 1.0), Pair.Create(-1.0, -1.0), Pair.Create(+1.0, +1.0)));
+            props.Add(new Int32Property(PropertyNames.Amount8, 2, 0, 10));
             props.Add(new BooleanProperty(PropertyNames.Amount4, true));
+            props.Add(new Int32Property(PropertyNames.Amount9, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.PrimaryColor.B, EnvironmentParameters.PrimaryColor.G, EnvironmentParameters.PrimaryColor.R, 255)), 0, 0xffffff));
+            props.Add(StaticListChoiceProperty.CreateForEnum<Amount10Options>(PropertyNames.Amount10, 0, false));
+            props.Add(new Int32Property(PropertyNames.Amount11, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.SecondaryColor.B, EnvironmentParameters.SecondaryColor.G, EnvironmentParameters.SecondaryColor.R, 255)), 0, 0xffffff));
 
-            return new PropertyCollection(props);
+            List<PropertyCollectionRule> propRules = new List<PropertyCollectionRule>();
+            propRules.Add(new ReadOnlyBoundToValueRule<object, StaticListChoiceProperty>(PropertyNames.Amount11, PropertyNames.Amount10, Amount10Options.Amount10Option1, false));
+            propRules.Add(new ReadOnlyBoundToValueRule<int, Int32Property>(PropertyNames.Amount4, PropertyNames.Amount8, 0, false));
+            propRules.Add(new ReadOnlyBoundToValueRule<int, Int32Property>(PropertyNames.Amount9, PropertyNames.Amount8, 0, false));
+
+            return new PropertyCollection(props, propRules);
         }
 
         protected override ControlInfo OnCreateConfigUI(PropertyCollection props)
@@ -144,6 +164,16 @@ namespace TwoPointPerspectiveEffect
             Rectangle selection7 = EnvironmentParameters.GetSelection(EnvironmentParameters.SourceSurface.Bounds).GetBoundsInt();
             ImageResource imageResource7 = ImageResource.FromImage(EnvironmentParameters.SourceSurface.CreateAliasedBitmap(selection7));
             configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.StaticImageUnderlay, imageResource7);
+            configUI.SetPropertyControlValue(PropertyNames.Amount8, ControlInfoPropertyNames.DisplayName, "Edge Outline Width");
+            configUI.SetPropertyControlValue(PropertyNames.Amount9, ControlInfoPropertyNames.DisplayName, "Edge Outline Color");
+            configUI.SetPropertyControlType(PropertyNames.Amount9, PropertyControlType.ColorWheel);
+            configUI.SetPropertyControlValue(PropertyNames.Amount10, ControlInfoPropertyNames.DisplayName, "Fill Style");
+            PropertyControlInfo Amount10Control = configUI.FindControlForPropertyName(PropertyNames.Amount10);
+            Amount10Control.SetValueDisplayName(Amount10Options.Amount10Option1, "None");
+            Amount10Control.SetValueDisplayName(Amount10Options.Amount10Option2, "Solid");
+            Amount10Control.SetValueDisplayName(Amount10Options.Amount10Option3, "Shaded");
+            configUI.SetPropertyControlValue(PropertyNames.Amount11, ControlInfoPropertyNames.DisplayName, "Fill Color");
+            configUI.SetPropertyControlType(PropertyNames.Amount11, PropertyControlType.ColorWheel);
 
             return configUI;
         }
@@ -157,6 +187,10 @@ namespace TwoPointPerspectiveEffect
             Amount5 = newToken.GetProperty<BooleanProperty>(PropertyNames.Amount5).Value;
             Amount6 = newToken.GetProperty<DoubleVectorProperty>(PropertyNames.Amount6).Value;
             Amount7 = newToken.GetProperty<DoubleVectorProperty>(PropertyNames.Amount7).Value;
+            Amount8 = newToken.GetProperty<Int32Property>(PropertyNames.Amount8).Value;
+            Amount9 = ColorBgra.FromOpaqueInt32(newToken.GetProperty<Int32Property>(PropertyNames.Amount9).Value);
+            Amount10 = (byte)((int)newToken.GetProperty<StaticListChoiceProperty>(PropertyNames.Amount10).Value);
+            Amount11 = ColorBgra.FromOpaqueInt32(newToken.GetProperty<Int32Property>(PropertyNames.Amount11).Value);
 
 
             cuboidSurface = new Surface(srcArgs.Surface.Size);
@@ -364,76 +398,144 @@ namespace TwoPointPerspectiveEffect
             #endregion
 
 
-
-            // Set coordinates, and draw lines connecting them
+            // Create drawing objects
             Bitmap cuboidBitmap = new Bitmap(selection.Width, selection.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             Graphics cuboidGraphics = Graphics.FromImage(cuboidBitmap);
             cuboidGraphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-            Pen cuboidPen = new Pen(Color.Black, 2);
+            Pen cuboidPen = new Pen(Amount9, Amount8);
             cuboidPen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
             cuboidPen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
 
+            Pen hiddenPen = new Pen(Amount9, Amount8);
+            hiddenPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dot;
+            cuboidPen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+            cuboidPen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+
+            SolidBrush fillBrush = new SolidBrush(Color.Transparent);
+
+            Color fillColorSolid = Amount11;
+
+            HsvColor fillColorBase = HsvColor.FromColor(Amount11);
+            fillColorBase.Saturation = 100;
+
+            HsvColor fillColorDark = fillColorBase;
+            fillColorDark.Value = 80;
+
+            HsvColor fillColorLight = fillColorBase;
+            fillColorLight.Saturation = 66;
+
+            HsvColor fillColorLighter = fillColorBase;
+            fillColorLighter.Saturation = 33;
+
+
+            // Set points
             PointF frontBottom = new PointF(baseBottomX, baseBottomY);
             PointF frontTop = new PointF(baseTopX, baseTopY);
-
-            cuboidGraphics.DrawLine(cuboidPen, frontTop, frontBottom);
 
             PointF leftBottom = new PointF(leftBottomX, leftBottomY);
             PointF leftTop = new PointF(leftTopX, leftTopY);
 
-            cuboidGraphics.DrawLine(cuboidPen, leftTop, frontTop);
-
-
-            cuboidGraphics.DrawLine(cuboidPen, leftBottom, frontBottom);
-
-            cuboidGraphics.DrawLine(cuboidPen, leftTop, leftBottom);
-
-
             PointF rightBottom = new PointF(rightBottomX, rightBottomY);
             PointF rightTop = new PointF(rightTopX, rightTopY);
 
-
-            cuboidGraphics.DrawLine(cuboidPen, rightTop, frontTop);
-
-            cuboidGraphics.DrawLine(cuboidPen, rightBottom, frontBottom);
-
-            cuboidGraphics.DrawLine(cuboidPen, rightTop, rightBottom);
-
+            PointF apexBottom = new PointF(bottomApexX, bottomApexY);
             PointF apexTop = new PointF(TopApexX, TopApexY);
 
-            Pen hiddenPen = new Pen(Color.Black, 2);
-            hiddenPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dot;
 
-            if (!hiddenTopApex)
+            // Fill sides
+            switch (Amount10)
             {
-                cuboidGraphics.DrawLine(cuboidPen, apexTop, rightTop);
-                cuboidGraphics.DrawLine(cuboidPen, apexTop, leftTop);
-            }
-            else if (hiddenTopApex && Amount4)
-            {
-                cuboidGraphics.DrawLine(hiddenPen, apexTop, rightTop);
-                cuboidGraphics.DrawLine(hiddenPen, apexTop, leftTop);
+                case 0: // None
+                    break;
+                case 1: // Solid
+                    fillBrush.Color = fillColorSolid;
+
+                    PointF[] frontFillPoints = { frontBottom, leftBottom, leftTop, frontTop, rightTop, rightBottom };
+                    cuboidGraphics.FillPolygon(fillBrush, frontFillPoints);
+
+                    if (!hiddenTopApex)
+                    {
+                        PointF[] topFillPoints = { frontTop, leftTop, apexTop, rightTop };
+                        cuboidGraphics.FillPolygon(fillBrush, topFillPoints);
+                    }
+
+                    if (!hiddenBottomApex)
+                    {
+                        PointF[] bottomFillPoints = { apexBottom, leftBottom, frontBottom, rightBottom };
+                        cuboidGraphics.FillPolygon(fillBrush, bottomFillPoints);
+                    }
+
+                    break;
+                case 2: // Shaded
+                    fillBrush.Color = fillColorLight.ToColor();
+                    PointF[] leftFillPoints = { frontBottom, leftBottom, leftTop, frontTop };
+                    cuboidGraphics.FillPolygon(fillBrush, leftFillPoints);
+
+                    fillBrush.Color = fillColorBase.ToColor();
+                    PointF[] rightFillPoints = { frontBottom, rightBottom, rightTop, frontTop };
+                    cuboidGraphics.FillPolygon(fillBrush, rightFillPoints);
+
+                    if (!hiddenTopApex)
+                    {
+                        fillBrush.Color = fillColorLighter.ToColor();
+                        PointF[] topFillPoints = { frontTop, leftTop, apexTop, rightTop };
+                        cuboidGraphics.FillPolygon(fillBrush, topFillPoints);
+                    }
+
+                    if (!hiddenBottomApex)
+                    {
+                        fillBrush.Color = fillColorDark.ToColor();
+                        PointF[] bottomFillPoints = { apexBottom, leftBottom, frontBottom, rightBottom };
+                        cuboidGraphics.FillPolygon(fillBrush, bottomFillPoints);
+                    }
+
+                    break;
             }
 
-            PointF apexBottom = new PointF(bottomApexX, bottomApexY);
 
-            if (!hiddenBottomApex)
+            // Draw Edges
+            if (Amount8 != 0)
             {
-                cuboidGraphics.DrawLine(cuboidPen, apexBottom, rightBottom);
-                cuboidGraphics.DrawLine(cuboidPen, apexBottom, leftBottom);
-            }
-            else if (hiddenBottomApex && Amount4)
-            {
-                cuboidGraphics.DrawLine(hiddenPen, apexBottom, rightBottom);
-                cuboidGraphics.DrawLine(hiddenPen, apexBottom, leftBottom);
-            }
+                cuboidGraphics.DrawLine(cuboidPen, frontTop, frontBottom);
 
-            if (Amount4)
-                cuboidGraphics.DrawLine(hiddenPen, apexBottom, apexTop);
+                cuboidGraphics.DrawLine(cuboidPen, leftTop, frontTop);
+                cuboidGraphics.DrawLine(cuboidPen, leftBottom, frontBottom);
+                cuboidGraphics.DrawLine(cuboidPen, leftTop, leftBottom);
+
+                cuboidGraphics.DrawLine(cuboidPen, rightTop, frontTop);
+                cuboidGraphics.DrawLine(cuboidPen, rightBottom, frontBottom);
+                cuboidGraphics.DrawLine(cuboidPen, rightTop, rightBottom);
+
+                if (!hiddenTopApex)
+                {
+                    cuboidGraphics.DrawLine(cuboidPen, apexTop, rightTop);
+                    cuboidGraphics.DrawLine(cuboidPen, apexTop, leftTop);
+                }
+                else if (hiddenTopApex && Amount4)
+                {
+                    cuboidGraphics.DrawLine(hiddenPen, apexTop, rightTop);
+                    cuboidGraphics.DrawLine(hiddenPen, apexTop, leftTop);
+                }
+
+                if (!hiddenBottomApex)
+                {
+                    cuboidGraphics.DrawLine(cuboidPen, apexBottom, rightBottom);
+                    cuboidGraphics.DrawLine(cuboidPen, apexBottom, leftBottom);
+                }
+                else if (hiddenBottomApex && Amount4)
+                {
+                    cuboidGraphics.DrawLine(hiddenPen, apexBottom, rightBottom);
+                    cuboidGraphics.DrawLine(hiddenPen, apexBottom, leftBottom);
+                }
+
+                if (Amount4)
+                    cuboidGraphics.DrawLine(hiddenPen, apexBottom, apexTop);
+            }
 
             cuboidPen.Dispose();
             hiddenPen.Dispose();
+            fillBrush.Dispose();
 
 
             cuboidSurface = Surface.CopyFromBitmap(cuboidBitmap);
@@ -463,6 +565,10 @@ namespace TwoPointPerspectiveEffect
         bool Amount5 = true; // [0,1] Draw Vanishing Points
         Pair<double, double> Amount6 = Pair.Create(0.0, 0.0); // Offset
         Pair<double, double> Amount7 = Pair.Create(0.0, 1.0); // Offset
+        int Amount8 = 2; // [0,10] Edge Outline Width
+        ColorBgra Amount9 = ColorBgra.FromBgr(0, 0, 0); // Edge Outline Color
+        byte Amount10 = 0; // Fill Style|None|Solid|Shaded
+        ColorBgra Amount11 = ColorBgra.FromBgr(0, 0, 0); // Fill Color
         #endregion
 
         Surface cuboidSurface, metaSurface;
