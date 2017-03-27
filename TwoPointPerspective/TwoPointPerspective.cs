@@ -16,7 +16,7 @@ namespace TwoPointPerspectiveEffect
         public string Copyright => ((AssemblyDescriptionAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false)[0]).Description;
         public string DisplayName => ((AssemblyProductAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyProductAttribute), false)[0]).Product;
         public Version Version => base.GetType().Assembly.GetName().Version;
-        public Uri WebsiteUri => new Uri("http://www.getpaint.net/redirect/plugins.html");
+        public Uri WebsiteUri => new Uri("http://forums.getpaint.net/index.php?showtopic=84519");
     }
 
     [PluginSupportInfo(typeof(PluginSupportInfo), DisplayName = "Two-point Perspective")]
