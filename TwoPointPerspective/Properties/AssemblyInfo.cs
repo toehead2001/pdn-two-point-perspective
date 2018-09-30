@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("vanishing|point|perspective|cube|cuboid")]
 [assembly: AssemblyCompany("toe_head2001")]
 [assembly: AssemblyProduct("Two-point Perspective")]
-[assembly: AssemblyCopyright("Copyright © 2017 toe_head2001")]
+[assembly: AssemblyCopyright("Copyright © 2018 toe_head2001")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
