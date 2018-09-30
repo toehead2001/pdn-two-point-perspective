@@ -12,34 +12,33 @@ namespace TwoPointPerspectiveEffect
 {
     public class PluginSupportInfo : IPluginSupportInfo
     {
-        public string Author => ((AssemblyCopyrightAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute), false)[0]).Copyright;
-        public string Copyright => ((AssemblyDescriptionAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false)[0]).Description;
-        public string DisplayName => ((AssemblyProductAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyProductAttribute), false)[0]).Product;
+        public string Author => base.GetType().Assembly.GetCustomAttribute<AssemblyCopyrightAttribute>().Copyright;
+        public string Copyright => base.GetType().Assembly.GetCustomAttribute<AssemblyDescriptionAttribute>().Description;
+        public string DisplayName => base.GetType().Assembly.GetCustomAttribute<AssemblyProductAttribute>().Product;
         public Version Version => base.GetType().Assembly.GetName().Version;
-        public Uri WebsiteUri => new Uri("http://forums.getpaint.net/index.php?showtopic=84519");
+        public Uri WebsiteUri => new Uri("https://forums.getpaint.net/index.php?showtopic=84519");
     }
 
     [PluginSupportInfo(typeof(PluginSupportInfo), DisplayName = "Two-point Perspective")]
     public class TwoPointPerspectiveEffectPlugin : PropertyBasedEffect
     {
-        int Amount1 = 100; // [0,1000] Height
-        int Amount2 = 200; // [0,1000] Left
-        int Amount3 = 150; // [0,1000] Right
-        bool Amount4 = true; // [0,1] Draw Hidden Edges
-        bool Amount5 = false; // [0,1] Draw Vanishing Points
-        Pair<double, double> Amount6 = Pair.Create(0.0, 0.0); // Offset
-        Pair<double, double> Amount7 = Pair.Create(0.0, 1.0); // Offset
-        int Amount8 = 2; // [0,10] Edge Outline Width
-        ColorBgra Amount9 = ColorBgra.FromBgr(0, 0, 0); // Edge Outline Color
-        byte Amount10 = 0; // Fill Style|None|Solid|Shaded
-        ColorBgra Amount11 = ColorBgra.FromBgr(0, 0, 0); // Fill Color
-        bool Amount12 = false; // [0,1] Draw Vanishing Points Guides
+        private int Amount1 = 100; // [0,1000] Height
+        private int Amount2 = 200; // [0,1000] Left
+        private int Amount3 = 150; // [0,1000] Right
+        private bool Amount4 = true; // [0,1] Draw Hidden Edges
+        private bool Amount5 = false; // [0,1] Draw Vanishing Points
+        private Pair<double, double> Amount6 = Pair.Create(0.0, 0.0); // Offset
+        private Pair<double, double> Amount7 = Pair.Create(0.0, 1.0); // Offset
+        private int Amount8 = 2; // [0,10] Edge Outline Width
+        private ColorBgra Amount9 = ColorBgra.FromBgr(0, 0, 0); // Edge Outline Color
+        private byte Amount10 = 0; // Fill Style|None|Solid|Shaded
+        private ColorBgra Amount11 = ColorBgra.FromBgr(0, 0, 0); // Fill Color
+        private bool Amount12 = false; // [0,1] Draw Vanishing Points Guides
 
-        const double rad180 = Math.PI / 180 * 180;
-        const double rad360 = Math.PI / 180 * 360;
+        private const double rad180 = Math.PI / 180 * 180;
+        private const double rad360 = Math.PI / 180 * 360;
 
-        Surface CuboidSurface;
-
+        private Surface CuboidSurface;
 
         private const string StaticName = "Two-point Perspective";
         private static readonly Image StaticIcon = new Bitmap(typeof(TwoPointPerspectiveEffectPlugin), "TwoPointPerspective.png");
@@ -74,25 +73,28 @@ namespace TwoPointPerspectiveEffect
 
         protected override PropertyCollection OnCreatePropertyCollection()
         {
-            List<Property> props = new List<Property>();
+            List<Property> props = new List<Property>
+            {
+                new Int32Property(PropertyNames.Amount1, 100, 0, 1000),
+                new Int32Property(PropertyNames.Amount2, 200, 0, 1000),
+                new Int32Property(PropertyNames.Amount3, 150, 0, 1000),
+                new DoubleVectorProperty(PropertyNames.Amount6, Pair.Create(0.0, 0.0), Pair.Create(-1.0, -1.0), Pair.Create(+1.0, +1.0)),
+                new BooleanProperty(PropertyNames.Amount5, false),
+                new BooleanProperty(PropertyNames.Amount12, false),
+                new DoubleVectorProperty(PropertyNames.Amount7, Pair.Create(0.0, 1.0), Pair.Create(-1.0, -1.0), Pair.Create(+1.0, +1.0)),
+                new Int32Property(PropertyNames.Amount8, 2, 0, 10),
+                new BooleanProperty(PropertyNames.Amount4, true),
+                new Int32Property(PropertyNames.Amount9, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.PrimaryColor.B, EnvironmentParameters.PrimaryColor.G, EnvironmentParameters.PrimaryColor.R, 255)), 0, 0xffffff),
+                StaticListChoiceProperty.CreateForEnum<Amount10Options>(PropertyNames.Amount10, 0, false),
+                new Int32Property(PropertyNames.Amount11, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.SecondaryColor.B, EnvironmentParameters.SecondaryColor.G, EnvironmentParameters.SecondaryColor.R, 255)), 0, 0xffffff)
+            };
 
-            props.Add(new Int32Property(PropertyNames.Amount1, 100, 0, 1000));
-            props.Add(new Int32Property(PropertyNames.Amount2, 200, 0, 1000));
-            props.Add(new Int32Property(PropertyNames.Amount3, 150, 0, 1000));
-            props.Add(new DoubleVectorProperty(PropertyNames.Amount6, Pair.Create(0.0, 0.0), Pair.Create(-1.0, -1.0), Pair.Create(+1.0, +1.0)));
-            props.Add(new BooleanProperty(PropertyNames.Amount5, false));
-            props.Add(new BooleanProperty(PropertyNames.Amount12, false));
-            props.Add(new DoubleVectorProperty(PropertyNames.Amount7, Pair.Create(0.0, 1.0), Pair.Create(-1.0, -1.0), Pair.Create(+1.0, +1.0)));
-            props.Add(new Int32Property(PropertyNames.Amount8, 2, 0, 10));
-            props.Add(new BooleanProperty(PropertyNames.Amount4, true));
-            props.Add(new Int32Property(PropertyNames.Amount9, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.PrimaryColor.B, EnvironmentParameters.PrimaryColor.G, EnvironmentParameters.PrimaryColor.R, 255)), 0, 0xffffff));
-            props.Add(StaticListChoiceProperty.CreateForEnum<Amount10Options>(PropertyNames.Amount10, 0, false));
-            props.Add(new Int32Property(PropertyNames.Amount11, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.SecondaryColor.B, EnvironmentParameters.SecondaryColor.G, EnvironmentParameters.SecondaryColor.R, 255)), 0, 0xffffff));
-
-            List<PropertyCollectionRule> propRules = new List<PropertyCollectionRule>();
-            propRules.Add(new ReadOnlyBoundToValueRule<object, StaticListChoiceProperty>(PropertyNames.Amount11, PropertyNames.Amount10, Amount10Options.Amount10Option1, false));
-            propRules.Add(new ReadOnlyBoundToValueRule<int, Int32Property>(PropertyNames.Amount4, PropertyNames.Amount8, 0, false));
-            propRules.Add(new ReadOnlyBoundToValueRule<int, Int32Property>(PropertyNames.Amount9, PropertyNames.Amount8, 0, false));
+            List<PropertyCollectionRule> propRules = new List<PropertyCollectionRule>
+            {
+                new ReadOnlyBoundToValueRule<object, StaticListChoiceProperty>(PropertyNames.Amount11, PropertyNames.Amount10, Amount10Options.Amount10Option1, false),
+                new ReadOnlyBoundToValueRule<int, Int32Property>(PropertyNames.Amount4, PropertyNames.Amount8, 0, false),
+                new ReadOnlyBoundToValueRule<int, Int32Property>(PropertyNames.Amount9, PropertyNames.Amount8, 0, false)
+            };
 
             return new PropertyCollection(props, propRules);
         }
@@ -161,9 +163,11 @@ namespace TwoPointPerspectiveEffect
             Amount11 = ColorBgra.FromOpaqueInt32(newToken.GetProperty<Int32Property>(PropertyNames.Amount11).Value);
             Amount12 = newToken.GetProperty<BooleanProperty>(PropertyNames.Amount12).Value;
 
-
             if (CuboidSurface == null)
+            {
                 CuboidSurface = new Surface(srcArgs.Size);
+            }
+
             CuboidSurface.CopySurface(srcArgs.Surface);
 
             Rectangle selection = EnvironmentParameters.GetSelection(srcArgs.Surface.Bounds).GetBoundsInt();
@@ -391,7 +395,6 @@ namespace TwoPointPerspectiveEffect
                         hiddenPen.DashStyle = DashStyle.Dot;
                         visiblePen.StartCap = LineCap.Round;
                         visiblePen.EndCap = LineCap.Round;
-
 
                         g.DrawLine(visiblePen, frontTop, frontBottom);
 
