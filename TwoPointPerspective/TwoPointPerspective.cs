@@ -22,19 +22,6 @@ namespace TwoPointPerspectiveEffect
     [PluginSupportInfo(typeof(PluginSupportInfo), DisplayName = "Two-point Perspective")]
     public class TwoPointPerspectiveEffectPlugin : PropertyBasedEffect
     {
-        private int Amount1 = 100; // [0,1000] Height
-        private int Amount2 = 200; // [0,1000] Left
-        private int Amount3 = 150; // [0,1000] Right
-        private bool Amount4 = true; // [0,1] Draw Hidden Edges
-        private bool Amount5 = false; // [0,1] Draw Vanishing Points
-        private Pair<double, double> Amount6 = Pair.Create(0.0, 0.0); // Offset
-        private Pair<double, double> Amount7 = Pair.Create(0.0, 1.0); // Offset
-        private int Amount8 = 2; // [0,10] Edge Outline Width
-        private ColorBgra Amount9 = ColorBgra.FromBgr(0, 0, 0); // Edge Outline Color
-        private byte Amount10 = 0; // Fill Style|None|Solid|Shaded
-        private ColorBgra Amount11 = ColorBgra.FromBgr(0, 0, 0); // Fill Color
-        private bool Amount12 = false; // [0,1] Draw Vanishing Points Guides
-
         private const double rad180 = Math.PI / 180 * 180;
         private const double rad360 = Math.PI / 180 * 360;
 
@@ -50,50 +37,50 @@ namespace TwoPointPerspectiveEffect
 
         private enum PropertyNames
         {
-            Amount1,
-            Amount2,
-            Amount3,
-            Amount4,
-            Amount5,
-            Amount6,
-            Amount7,
-            Amount8,
-            Amount9,
-            Amount10,
-            Amount11,
-            Amount12
+            Height,
+            Length,
+            Width,
+            HiddenEdges,
+            VanishingPts,
+            VanishingPtsPos,
+            CuboidPos,
+            EdgeOutlineWidth,
+            EdgeOutlineColor,
+            FillStyle,
+            FillColor,
+            VanishingPtsGuides
         }
 
-        private enum Amount10Options
+        private enum FillStyle
         {
-            Amount10Option1,
-            Amount10Option2,
-            Amount10Option3
+            None,
+            Solid,
+            Shaded
         }
 
         protected override PropertyCollection OnCreatePropertyCollection()
         {
             List<Property> props = new List<Property>
             {
-                new Int32Property(PropertyNames.Amount1, 100, 0, 1000),
-                new Int32Property(PropertyNames.Amount2, 200, 0, 1000),
-                new Int32Property(PropertyNames.Amount3, 150, 0, 1000),
-                new DoubleVectorProperty(PropertyNames.Amount6, Pair.Create(0.0, 0.0), Pair.Create(-1.0, -1.0), Pair.Create(+1.0, +1.0)),
-                new BooleanProperty(PropertyNames.Amount5, false),
-                new BooleanProperty(PropertyNames.Amount12, false),
-                new DoubleVectorProperty(PropertyNames.Amount7, Pair.Create(0.0, 1.0), Pair.Create(-1.0, -1.0), Pair.Create(+1.0, +1.0)),
-                new Int32Property(PropertyNames.Amount8, 2, 0, 10),
-                new BooleanProperty(PropertyNames.Amount4, true),
-                new Int32Property(PropertyNames.Amount9, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.PrimaryColor.B, EnvironmentParameters.PrimaryColor.G, EnvironmentParameters.PrimaryColor.R, 255)), 0, 0xffffff),
-                StaticListChoiceProperty.CreateForEnum<Amount10Options>(PropertyNames.Amount10, 0, false),
-                new Int32Property(PropertyNames.Amount11, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.SecondaryColor.B, EnvironmentParameters.SecondaryColor.G, EnvironmentParameters.SecondaryColor.R, 255)), 0, 0xffffff)
+                new Int32Property(PropertyNames.Height, 100, 0, 1000),
+                new Int32Property(PropertyNames.Length, 200, 0, 1000),
+                new Int32Property(PropertyNames.Width, 150, 0, 1000),
+                new DoubleVectorProperty(PropertyNames.VanishingPtsPos, Pair.Create(0.0, 0.0), Pair.Create(-1.0, -1.0), Pair.Create(+1.0, +1.0)),
+                new BooleanProperty(PropertyNames.VanishingPts, false),
+                new BooleanProperty(PropertyNames.VanishingPtsGuides, false),
+                new DoubleVectorProperty(PropertyNames.CuboidPos, Pair.Create(0.0, 1.0), Pair.Create(-1.0, -1.0), Pair.Create(+1.0, +1.0)),
+                new Int32Property(PropertyNames.EdgeOutlineWidth, 2, 0, 10),
+                new BooleanProperty(PropertyNames.HiddenEdges, true),
+                new Int32Property(PropertyNames.EdgeOutlineColor, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.PrimaryColor.B, EnvironmentParameters.PrimaryColor.G, EnvironmentParameters.PrimaryColor.R, 255)), 0, 0xffffff),
+                StaticListChoiceProperty.CreateForEnum<FillStyle>(PropertyNames.FillStyle, 0, false),
+                new Int32Property(PropertyNames.FillColor, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.SecondaryColor.B, EnvironmentParameters.SecondaryColor.G, EnvironmentParameters.SecondaryColor.R, 255)), 0, 0xffffff)
             };
 
             List<PropertyCollectionRule> propRules = new List<PropertyCollectionRule>
             {
-                new ReadOnlyBoundToValueRule<object, StaticListChoiceProperty>(PropertyNames.Amount11, PropertyNames.Amount10, Amount10Options.Amount10Option1, false),
-                new ReadOnlyBoundToValueRule<int, Int32Property>(PropertyNames.Amount4, PropertyNames.Amount8, 0, false),
-                new ReadOnlyBoundToValueRule<int, Int32Property>(PropertyNames.Amount9, PropertyNames.Amount8, 0, false)
+                new ReadOnlyBoundToValueRule<object, StaticListChoiceProperty>(PropertyNames.FillColor, PropertyNames.FillStyle, FillStyle.None, false),
+                new ReadOnlyBoundToValueRule<int, Int32Property>(PropertyNames.HiddenEdges, PropertyNames.EdgeOutlineWidth, 0, false),
+                new ReadOnlyBoundToValueRule<int, Int32Property>(PropertyNames.EdgeOutlineColor, PropertyNames.EdgeOutlineWidth, 0, false)
             };
 
             return new PropertyCollection(props, propRules);
@@ -103,65 +90,65 @@ namespace TwoPointPerspectiveEffect
         {
             ControlInfo configUI = CreateDefaultConfigUI(props);
 
-            configUI.SetPropertyControlValue(PropertyNames.Amount1, ControlInfoPropertyNames.DisplayName, "Height");
-            configUI.SetPropertyControlValue(PropertyNames.Amount2, ControlInfoPropertyNames.DisplayName, "Length");
-            configUI.SetPropertyControlValue(PropertyNames.Amount3, ControlInfoPropertyNames.DisplayName, "Width");
-            configUI.SetPropertyControlValue(PropertyNames.Amount4, ControlInfoPropertyNames.DisplayName, string.Empty);
-            configUI.SetPropertyControlValue(PropertyNames.Amount4, ControlInfoPropertyNames.Description, "Draw Hidden Edges");
-            configUI.SetPropertyControlValue(PropertyNames.Amount5, ControlInfoPropertyNames.DisplayName, string.Empty);
-            configUI.SetPropertyControlValue(PropertyNames.Amount5, ControlInfoPropertyNames.Description, "Draw Vanishing Points");
-            configUI.SetPropertyControlValue(PropertyNames.Amount12, ControlInfoPropertyNames.DisplayName, string.Empty);
-            configUI.SetPropertyControlValue(PropertyNames.Amount12, ControlInfoPropertyNames.Description, "Draw Vanishing Points Guides");
-            configUI.SetPropertyControlValue(PropertyNames.Amount6, ControlInfoPropertyNames.DisplayName, "Vanishing Point Position (y-axis only)");
-            configUI.SetPropertyControlValue(PropertyNames.Amount6, ControlInfoPropertyNames.SliderSmallChangeX, 0.05);
-            configUI.SetPropertyControlValue(PropertyNames.Amount6, ControlInfoPropertyNames.SliderLargeChangeX, 0.25);
-            configUI.SetPropertyControlValue(PropertyNames.Amount6, ControlInfoPropertyNames.UpDownIncrementX, 0.01);
-            configUI.SetPropertyControlValue(PropertyNames.Amount6, ControlInfoPropertyNames.SliderSmallChangeY, 0.05);
-            configUI.SetPropertyControlValue(PropertyNames.Amount6, ControlInfoPropertyNames.SliderLargeChangeY, 0.25);
-            configUI.SetPropertyControlValue(PropertyNames.Amount6, ControlInfoPropertyNames.UpDownIncrementY, 0.01);
-            configUI.SetPropertyControlValue(PropertyNames.Amount6, ControlInfoPropertyNames.DecimalPlaces, 3);
+            configUI.SetPropertyControlValue(PropertyNames.Height, ControlInfoPropertyNames.DisplayName, "Height");
+            configUI.SetPropertyControlValue(PropertyNames.Length, ControlInfoPropertyNames.DisplayName, "Length");
+            configUI.SetPropertyControlValue(PropertyNames.Width, ControlInfoPropertyNames.DisplayName, "Width");
+            configUI.SetPropertyControlValue(PropertyNames.HiddenEdges, ControlInfoPropertyNames.DisplayName, string.Empty);
+            configUI.SetPropertyControlValue(PropertyNames.HiddenEdges, ControlInfoPropertyNames.Description, "Draw Hidden Edges");
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPts, ControlInfoPropertyNames.DisplayName, string.Empty);
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPts, ControlInfoPropertyNames.Description, "Draw Vanishing Points");
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsGuides, ControlInfoPropertyNames.DisplayName, string.Empty);
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsGuides, ControlInfoPropertyNames.Description, "Draw Vanishing Points Guides");
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsPos, ControlInfoPropertyNames.DisplayName, "Vanishing Point Position (y-axis only)");
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsPos, ControlInfoPropertyNames.SliderSmallChangeX, 0.05);
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsPos, ControlInfoPropertyNames.SliderLargeChangeX, 0.25);
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsPos, ControlInfoPropertyNames.UpDownIncrementX, 0.01);
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsPos, ControlInfoPropertyNames.SliderSmallChangeY, 0.05);
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsPos, ControlInfoPropertyNames.SliderLargeChangeY, 0.25);
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsPos, ControlInfoPropertyNames.UpDownIncrementY, 0.01);
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsPos, ControlInfoPropertyNames.DecimalPlaces, 3);
             Rectangle selection6 = EnvironmentParameters.GetSelection(EnvironmentParameters.SourceSurface.Bounds).GetBoundsInt();
             ImageResource imageResource6 = ImageResource.FromImage(EnvironmentParameters.SourceSurface.CreateAliasedBitmap(selection6));
-            configUI.SetPropertyControlValue(PropertyNames.Amount6, ControlInfoPropertyNames.StaticImageUnderlay, imageResource6);
-            configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.DisplayName, "Cuboid Position");
-            configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.SliderSmallChangeX, 0.05);
-            configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.SliderLargeChangeX, 0.25);
-            configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.UpDownIncrementX, 0.01);
-            configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.SliderSmallChangeY, 0.05);
-            configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.SliderLargeChangeY, 0.25);
-            configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.UpDownIncrementY, 0.01);
-            configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.DecimalPlaces, 3);
+            configUI.SetPropertyControlValue(PropertyNames.VanishingPtsPos, ControlInfoPropertyNames.StaticImageUnderlay, imageResource6);
+            configUI.SetPropertyControlValue(PropertyNames.CuboidPos, ControlInfoPropertyNames.DisplayName, "Cuboid Position");
+            configUI.SetPropertyControlValue(PropertyNames.CuboidPos, ControlInfoPropertyNames.SliderSmallChangeX, 0.05);
+            configUI.SetPropertyControlValue(PropertyNames.CuboidPos, ControlInfoPropertyNames.SliderLargeChangeX, 0.25);
+            configUI.SetPropertyControlValue(PropertyNames.CuboidPos, ControlInfoPropertyNames.UpDownIncrementX, 0.01);
+            configUI.SetPropertyControlValue(PropertyNames.CuboidPos, ControlInfoPropertyNames.SliderSmallChangeY, 0.05);
+            configUI.SetPropertyControlValue(PropertyNames.CuboidPos, ControlInfoPropertyNames.SliderLargeChangeY, 0.25);
+            configUI.SetPropertyControlValue(PropertyNames.CuboidPos, ControlInfoPropertyNames.UpDownIncrementY, 0.01);
+            configUI.SetPropertyControlValue(PropertyNames.CuboidPos, ControlInfoPropertyNames.DecimalPlaces, 3);
             Rectangle selection7 = EnvironmentParameters.GetSelection(EnvironmentParameters.SourceSurface.Bounds).GetBoundsInt();
             ImageResource imageResource7 = ImageResource.FromImage(EnvironmentParameters.SourceSurface.CreateAliasedBitmap(selection7));
-            configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.StaticImageUnderlay, imageResource7);
-            configUI.SetPropertyControlValue(PropertyNames.Amount8, ControlInfoPropertyNames.DisplayName, "Edge Outline Width");
-            configUI.SetPropertyControlValue(PropertyNames.Amount9, ControlInfoPropertyNames.DisplayName, "Edge Outline Color");
-            configUI.SetPropertyControlType(PropertyNames.Amount9, PropertyControlType.ColorWheel);
-            configUI.SetPropertyControlValue(PropertyNames.Amount10, ControlInfoPropertyNames.DisplayName, "Fill Style");
-            PropertyControlInfo Amount10Control = configUI.FindControlForPropertyName(PropertyNames.Amount10);
-            Amount10Control.SetValueDisplayName(Amount10Options.Amount10Option1, "None");
-            Amount10Control.SetValueDisplayName(Amount10Options.Amount10Option2, "Solid");
-            Amount10Control.SetValueDisplayName(Amount10Options.Amount10Option3, "Shaded");
-            configUI.SetPropertyControlValue(PropertyNames.Amount11, ControlInfoPropertyNames.DisplayName, "Fill Color");
-            configUI.SetPropertyControlType(PropertyNames.Amount11, PropertyControlType.ColorWheel);
+            configUI.SetPropertyControlValue(PropertyNames.CuboidPos, ControlInfoPropertyNames.StaticImageUnderlay, imageResource7);
+            configUI.SetPropertyControlValue(PropertyNames.EdgeOutlineWidth, ControlInfoPropertyNames.DisplayName, "Edge Outline Width");
+            configUI.SetPropertyControlValue(PropertyNames.EdgeOutlineColor, ControlInfoPropertyNames.DisplayName, "Edge Outline Color");
+            configUI.SetPropertyControlType(PropertyNames.EdgeOutlineColor, PropertyControlType.ColorWheel);
+            configUI.SetPropertyControlValue(PropertyNames.FillStyle, ControlInfoPropertyNames.DisplayName, "Fill Style");
+            PropertyControlInfo Amount10Control = configUI.FindControlForPropertyName(PropertyNames.FillStyle);
+            Amount10Control.SetValueDisplayName(FillStyle.None, "None");
+            Amount10Control.SetValueDisplayName(FillStyle.Solid, "Solid");
+            Amount10Control.SetValueDisplayName(FillStyle.Shaded, "Shaded");
+            configUI.SetPropertyControlValue(PropertyNames.FillColor, ControlInfoPropertyNames.DisplayName, "Fill Color");
+            configUI.SetPropertyControlType(PropertyNames.FillColor, PropertyControlType.ColorWheel);
 
             return configUI;
         }
 
         protected override void OnSetRenderInfo(PropertyBasedEffectConfigToken newToken, RenderArgs dstArgs, RenderArgs srcArgs)
         {
-            Amount1 = newToken.GetProperty<Int32Property>(PropertyNames.Amount1).Value;
-            Amount2 = newToken.GetProperty<Int32Property>(PropertyNames.Amount2).Value;
-            Amount3 = newToken.GetProperty<Int32Property>(PropertyNames.Amount3).Value;
-            Amount4 = newToken.GetProperty<BooleanProperty>(PropertyNames.Amount4).Value;
-            Amount5 = newToken.GetProperty<BooleanProperty>(PropertyNames.Amount5).Value;
-            Amount6 = newToken.GetProperty<DoubleVectorProperty>(PropertyNames.Amount6).Value;
-            Amount7 = newToken.GetProperty<DoubleVectorProperty>(PropertyNames.Amount7).Value;
-            Amount8 = newToken.GetProperty<Int32Property>(PropertyNames.Amount8).Value;
-            Amount9 = ColorBgra.FromOpaqueInt32(newToken.GetProperty<Int32Property>(PropertyNames.Amount9).Value);
-            Amount10 = (byte)((int)newToken.GetProperty<StaticListChoiceProperty>(PropertyNames.Amount10).Value);
-            Amount11 = ColorBgra.FromOpaqueInt32(newToken.GetProperty<Int32Property>(PropertyNames.Amount11).Value);
-            Amount12 = newToken.GetProperty<BooleanProperty>(PropertyNames.Amount12).Value;
+            int height = newToken.GetProperty<Int32Property>(PropertyNames.Height).Value;
+            int length = newToken.GetProperty<Int32Property>(PropertyNames.Length).Value;
+            int width = newToken.GetProperty<Int32Property>(PropertyNames.Width).Value;
+            bool hiddenEdges = newToken.GetProperty<BooleanProperty>(PropertyNames.HiddenEdges).Value;
+            bool vanishingPts = newToken.GetProperty<BooleanProperty>(PropertyNames.VanishingPts).Value;
+            Pair<double, double> vanishingPtsPos = newToken.GetProperty<DoubleVectorProperty>(PropertyNames.VanishingPtsPos).Value;
+            Pair<double, double> cuboidPos = newToken.GetProperty<DoubleVectorProperty>(PropertyNames.CuboidPos).Value;
+            int edgeOutlineWidth = newToken.GetProperty<Int32Property>(PropertyNames.EdgeOutlineWidth).Value;
+            ColorBgra edgeOutlineColor = ColorBgra.FromOpaqueInt32(newToken.GetProperty<Int32Property>(PropertyNames.EdgeOutlineColor).Value);
+            FillStyle fillStyle = (FillStyle)newToken.GetProperty<StaticListChoiceProperty>(PropertyNames.FillStyle).Value;
+            ColorBgra fillColor = ColorBgra.FromOpaqueInt32(newToken.GetProperty<Int32Property>(PropertyNames.FillColor).Value);
+            bool vanishingPtsGuides = newToken.GetProperty<BooleanProperty>(PropertyNames.VanishingPtsGuides).Value;
 
             if (CuboidSurface == null)
             {
@@ -185,7 +172,7 @@ namespace TwoPointPerspectiveEffect
                 PointF leftVp = new PointF
                 {
                     X = selection.Left,
-                    Y = (float)(selCenter.Y + selCenter.Y * Amount6.Second)
+                    Y = (float)(selCenter.Y + selCenter.Y * vanishingPtsPos.Second)
                 };
 
                 PointF rightVp = new PointF
@@ -198,18 +185,18 @@ namespace TwoPointPerspectiveEffect
                 #region Front Bottom & Front Top points
                 PointF frontBottom = new PointF
                 {
-                    X = (float)(selCenter.X + selCenter.X * Amount7.First),
-                    Y = (float)(((selection.Bottom - 2) / 2f) + ((selection.Bottom - 2) * Amount7.Second / 2f))
+                    X = (float)(selCenter.X + selCenter.X * cuboidPos.First),
+                    Y = (float)(((selection.Bottom - 2) / 2f) + ((selection.Bottom - 2) * cuboidPos.Second / 2f))
                 };
 
                 PointF frontTop = new PointF
                 {
                     X = frontBottom.X,
-                    Y = frontBottom.Y - Amount1
+                    Y = frontBottom.Y - height
                 };
                 #endregion
 
-                if (Amount2 > frontBottom.X - leftVp.X || Amount3 > rightVp.X - frontBottom.X)
+                if (length > frontBottom.X - leftVp.X || width > rightVp.X - frontBottom.X)
                 {
                     using (Font font = new Font(new FontFamily("Arial"), 14))
                     {
@@ -221,45 +208,45 @@ namespace TwoPointPerspectiveEffect
 
                 #region Left Bottom point
                 double frontLeftBottomAngle = Math.Atan((frontBottom.Y - leftVp.Y) / (frontBottom.X - leftVp.X));
-                double frontLeftBottomLength = Amount2 / Math.Cos(frontLeftBottomAngle);
+                double frontLeftBottomLength = length / Math.Cos(frontLeftBottomAngle);
 
                 PointF leftBottom = new PointF
                 {
-                    X = frontBottom.X - Amount2,
-                    Y = (float)(frontBottom.Y - Math.Tan(frontLeftBottomAngle) * Amount2)
+                    X = frontBottom.X - length,
+                    Y = (float)(frontBottom.Y - Math.Tan(frontLeftBottomAngle) * length)
                 };
                 #endregion
 
                 #region Left Top point
                 double frontLeftTopAngle = Math.Atan((frontTop.Y - leftVp.Y) / (frontTop.X - leftVp.X));
-                double frontLeftTopLength = Amount2 / Math.Cos(frontLeftTopAngle);
+                double frontLeftTopLength = length / Math.Cos(frontLeftTopAngle);
 
                 PointF leftTop = new PointF
                 {
-                    X = frontTop.X - Amount2,
-                    Y = (float)(frontTop.Y - Math.Tan(frontLeftTopAngle) * Amount2)
+                    X = frontTop.X - length,
+                    Y = (float)(frontTop.Y - Math.Tan(frontLeftTopAngle) * length)
                 };
                 #endregion
 
                 #region Right Bottom point
                 double frontRightBottomAngle = Math.Atan((frontBottom.Y - rightVp.Y) / (rightVp.X - frontBottom.X));
-                double frontRightBottomLength = Amount3 / Math.Cos(frontRightBottomAngle);
+                double frontRightBottomLength = width / Math.Cos(frontRightBottomAngle);
 
                 PointF rightBottom = new PointF
                 {
-                    X = frontBottom.X + Amount3,
-                    Y = (float)(frontBottom.Y - Math.Tan(frontRightBottomAngle) * Amount3)
+                    X = frontBottom.X + width,
+                    Y = (float)(frontBottom.Y - Math.Tan(frontRightBottomAngle) * width)
                 };
                 #endregion
 
                 #region Right Top point
                 double frontRightTopAngle = Math.Atan((frontTop.Y - rightVp.Y) / (rightVp.X - frontTop.X));
-                double frontRightTopLength = Amount3 / Math.Cos(frontRightTopAngle);
+                double frontRightTopLength = width / Math.Cos(frontRightTopAngle);
 
                 PointF rightTop = new PointF
                 {
-                    X = frontTop.X + Amount3,
-                    Y = (float)(frontTop.Y - Math.Tan(frontRightTopAngle) * Amount3)
+                    X = frontTop.X + width,
+                    Y = (float)(frontTop.Y - Math.Tan(frontRightTopAngle) * width)
                 };
                 #endregion
 
@@ -316,10 +303,10 @@ namespace TwoPointPerspectiveEffect
                 System.Diagnostics.Debug.Assert(!(topFaceVisible && bottomFaceVisible), "Both Top and Bottom faces shouldn't be visible at the same time!!");
 
                 #region Fill sides
-                switch (Amount10)
+                switch (fillStyle)
                 {
-                    case 1: // Solid
-                        using (SolidBrush fillBrush = new SolidBrush(Amount11))
+                    case FillStyle.Solid:
+                        using (SolidBrush fillBrush = new SolidBrush(fillColor))
                         {
                             if (topFaceVisible)
                             {
@@ -338,8 +325,8 @@ namespace TwoPointPerspectiveEffect
                             }
                         }
                         break;
-                    case 2: // Shaded
-                        HsvColor fillColorBase = HsvColor.FromColor(Amount11);
+                    case FillStyle.Shaded:
+                        HsvColor fillColorBase = HsvColor.FromColor(fillColor);
                         fillColorBase.Saturation = 100;
 
                         HsvColor fillColorDark = fillColorBase;
@@ -351,8 +338,8 @@ namespace TwoPointPerspectiveEffect
                         HsvColor fillColorLighter = fillColorBase;
                         fillColorLighter.Saturation = 33;
 
-                        using (SolidBrush fillBrush = new SolidBrush(Amount11))
-                        using (Pen seamPen = new Pen(Amount11, 1))
+                        using (SolidBrush fillBrush = new SolidBrush(fillColor))
+                        using (Pen seamPen = new Pen(fillColor, 1))
                         {
                             PointF[] leftFillPoints = { frontBottom, leftBottom, leftTop, frontTop };
                             fillBrush.Color = fillColorLight.ToColor();
@@ -384,10 +371,10 @@ namespace TwoPointPerspectiveEffect
                 #endregion
 
                 #region Draw Edges
-                if (Amount8 != 0)
+                if (edgeOutlineWidth != 0)
                 {
-                    using (Pen visiblePen = new Pen(Amount9, Amount8))
-                    using (Pen hiddenPen = new Pen(Amount9, Amount8))
+                    using (Pen visiblePen = new Pen(edgeOutlineColor, edgeOutlineWidth))
+                    using (Pen hiddenPen = new Pen(edgeOutlineColor, edgeOutlineWidth))
                     {
                         visiblePen.StartCap = LineCap.Round;
                         visiblePen.EndCap = LineCap.Round;
@@ -411,7 +398,7 @@ namespace TwoPointPerspectiveEffect
                             g.DrawLine(visiblePen, backTop, rightTop);
                             g.DrawLine(visiblePen, backTop, leftTop);
                         }
-                        else if (Amount4)
+                        else if (hiddenEdges)
                         {
                             g.DrawLine(hiddenPen, backTop, rightTop);
                             g.DrawLine(hiddenPen, backTop, leftTop);
@@ -422,26 +409,26 @@ namespace TwoPointPerspectiveEffect
                             g.DrawLine(visiblePen, backBottom, rightBottom);
                             g.DrawLine(visiblePen, backBottom, leftBottom);
                         }
-                        else if (Amount4)
+                        else if (hiddenEdges)
                         {
                             g.DrawLine(hiddenPen, backBottom, rightBottom);
                             g.DrawLine(hiddenPen, backBottom, leftBottom);
                         }
 
-                        if (Amount4)
+                        if (hiddenEdges)
                             g.DrawLine(hiddenPen, backBottom, backTop);
                     }
                 }
                 #endregion
 
                 #region Draw Vanishing Points
-                if (Amount5)
+                if (vanishingPts)
                 {
                     g.FillRectangle(Brushes.Red, leftVp.X, leftVp.Y - 2, 4, 4);
                     g.FillRectangle(Brushes.Blue, rightVp.X - 4, rightVp.Y - 2, 4, 4);
                 }
 
-                if (Amount12)
+                if (vanishingPtsGuides)
                 {
                     using (Pen guidePen = new Pen(Color.Red, 1))
                     {
